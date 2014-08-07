@@ -1,0 +1,100 @@
+apply plugin: 'groovy'
+apply plugin: 'maven'
+apply plugin: 'maven-publish'
+
+sourceCompatibility = 1.8
+
+group = 'com.ofg'
+description = 'Microhackaton Deployment Server'
+version = '0.0.1-SNAPSHOT'
+
+buildscript {
+    repositories {
+        mavenLocal()
+        jcenter()
+    }
+    dependencies {
+    }
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    jcenter()
+}
+
+ext {
+    groovyVersion = '2.3.3'
+    spockVersion = '0.7-groovy-2.0'
+    undertowVersion = '1.0.15.Final'
+}
+
+configurations {
+    compile.exclude group: "org.slf4j", module: "slf4j-log4j12"
+    compile.exclude group: "org.slf4j", module: "log4j-over-slf4j"
+}
+
+dependencies {
+    compile "org.codehaus.groovy:groovy-all:$groovyVersion:indy"
+    compile 'org.jboss.resteasy:resteasy-undertow:3.0.8.Final'
+    compile 'org.jboss.resteasy:resteasy-jackson-provider:3.0.8.Final'
+
+    compile "io.undertow:undertow-core:$undertowVersion"
+    compile "io.undertow:undertow-servlet:$undertowVersion"
+    compile 'org.apache.ivy:ivy:2.3.0'
+    compile 'args4j:args4j:2.0.28'
+    compile 'com.google.guava:guava:17.0'
+
+    testCompile("org.spockframework:spock-core:$spockVersion") {
+        exclude group: 'org.codehaus.groovy', module: 'groovy-all'
+    }
+
+    testCompile ('com.jayway.awaitility:awaitility-groovy:1.6.1') {
+        exclude group: 'org.codehaus.groovy', module: 'groovy-all'
+    }
+}
+
+build.dependsOn 'fatJar'
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+
+            artifact sourcesJar {
+                classifier "sources"
+            }
+
+            artifact fatJar {
+                classifier "fatJar"
+            }
+        }
+    }
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+task fatJar(type: Jar, dependsOn: sourcesJar) {
+    classifier = 'fatJar'
+
+    from files(sourceSets.main.output.classesDir)
+    from configurations.runtime.asFileTree.files.collect { zipTree(it) }
+
+    manifest {
+        attributes 'Main-Class': 'com.ofg.deployments.Main'
+    }
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.0'
+}
+
+artifacts {
+    archives sourcesJar
+    archives fatJar
+}
+
+
