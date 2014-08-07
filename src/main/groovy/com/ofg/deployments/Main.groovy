@@ -1,5 +1,6 @@
 package com.ofg.deployments
 import io.undertow.Undertow
+import org.jboss.resteasy.plugins.providers.jackson.ResteasyJacksonProvider
 import org.jboss.resteasy.plugins.server.undertow.UndertowJaxrsServer
 import org.kohsuke.args4j.CmdLineException
 import org.kohsuke.args4j.CmdLineParser
@@ -167,7 +168,7 @@ It will expose one method on /stop to stop the server. Default is 18081""")
     static class RestApp extends Application {
         @Override
         public Set<Class<?>> getClasses() {
-            return [Main] as Set
+            return [ResteasyJacksonProvider, Main] as Set
         }
     }
 
