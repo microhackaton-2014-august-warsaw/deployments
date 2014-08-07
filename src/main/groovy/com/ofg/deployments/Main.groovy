@@ -10,6 +10,7 @@ import javax.ws.rs.Consumes
 import javax.ws.rs.GET
 import javax.ws.rs.POST
 import javax.ws.rs.Path
+import javax.ws.rs.Produces
 import javax.ws.rs.core.Application
 
 @Path("/")
@@ -26,7 +27,7 @@ It will expose one method on /stop to stop the server. Default is 18081""")
     @Option(name = '-r', usage = "Reposioty where the jars are uploaded. Default is 'http://nexus.microhackathon.pl/content/repositories/releases/'")
     private String repository = "http://nexus.microhackathon.pl/content/repositories/releases/"
 
-    private static Map<String, Process> spawnedProcesses = new HashMap<>()
+    private static Map<String, ProcessWithDeployment> spawnedProcesses = new HashMap<>()
 
     @Option(name = '-dir', usage = 'Dir where jars will be downloaded. Default is jars')
     private File deploymentDir = new File("jars")
@@ -47,6 +48,13 @@ It will expose one method on /stop to stop the server. Default is 18081""")
         } catch (Exception e) {
             return e.toString()
         }
+    }
+
+    @GET
+    @Path("/list")
+    @Produces("application/json")
+    public List<Deployment> list() {
+        return spawnedProcesses.values().collect {it.deployment}
     }
 
     @POST
@@ -70,7 +78,7 @@ It will expose one method on /stop to stop the server. Default is 18081""")
         synchronized (spawnedProcesses) {
             // make sure one deployment is done at a time
             if (spawnedProcesses.get(deployment.uniqueId()) != null) {
-                Process oldProcess = spawnedProcesses.get(deployment.uniqueId())
+                Process oldProcess = spawnedProcesses.get(deployment.uniqueId()).process
                 println "killing old process"
                 oldProcess.destroy()
                 oldProcess.waitFor()
@@ -82,7 +90,7 @@ It will expose one method on /stop to stop the server. Default is 18081""")
             println "command $command"
             Process proc = command.execute()
 
-            spawnedProcesses.put(deployment.uniqueId(), proc)
+            spawnedProcesses.put(deployment.uniqueId(), new ProcessWithDeployment(process: proc, deployment: deployment))
 
             File output = new File(logsDir, "${deployment.uniqueId()}.log")
 
@@ -121,8 +129,8 @@ It will expose one method on /stop to stop the server. Default is 18081""")
 
     private static void shutdown() {
         spawnedProcesses.values().each {
-            it.destroy()
-            it.waitFor()
+            it.process.destroy()
+            it.process.waitFor()
         }
 
         server.stop()
