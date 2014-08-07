@@ -20,9 +20,12 @@ class Main {
 
     private static final int DEFAULT_DEPLOY_PORT_NUMBER = 18081
 
-    @Option(name = '-mp', usage = """optional port number on which zookeeper rest server will be started.
+    @Option(name = '-p', usage = """optional port number on which zookeeper rest server will be started.
 It will expose one method on /stop to stop the server. Default is 18081""")
     private int controlPortNumber = DEFAULT_DEPLOY_PORT_NUMBER
+
+    @Option(name = '-h', usage = "Host to bind to. Default is 0.0.0.0")
+    private String controlHost = "0.0.0.0"
 
     @Option(name = '-r', usage = "Reposioty where the jars are uploaded. Default is 'http://nexus.microhackathon.pl/content/repositories/releases/'")
     private String repository = "http://nexus.microhackathon.pl/content/repositories/releases/"
@@ -155,6 +158,7 @@ It will expose one method on /stop to stop the server. Default is 18081""")
 
     private void startDeploymentServer() {
         System.setProperty("org.jboss.resteasy.port", "$controlPortNumber")
+        System.setProperty("org.jboss.resteasy.host", controlHost)
         server = new UndertowJaxrsServer().start()
         server.deploy(RestApp)
         println "Deployment server started with on port [$controlPortNumber]"
