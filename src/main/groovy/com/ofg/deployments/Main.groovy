@@ -1,5 +1,5 @@
 package com.ofg.deployments
-
+import io.undertow.Undertow
 import org.jboss.resteasy.plugins.server.undertow.UndertowJaxrsServer
 import org.kohsuke.args4j.CmdLineException
 import org.kohsuke.args4j.CmdLineParser
@@ -157,9 +157,8 @@ It will expose one method on /stop to stop the server. Default is 18081""")
     }
 
     private void startDeploymentServer() {
-        System.setProperty("org.jboss.resteasy.port", "$controlPortNumber")
-        System.setProperty("org.jboss.resteasy.host", controlHost)
-        server = new UndertowJaxrsServer().start()
+        server = new UndertowJaxrsServer().start(Undertow.builder()
+                .addHttpListener(controlPortNumber, controlHost))
         server.deploy(RestApp)
         println "Deployment server started with on port [$controlPortNumber]"
     }
