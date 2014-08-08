@@ -1,12 +1,14 @@
 apply plugin: 'groovy'
 apply plugin: 'maven'
 apply plugin: 'maven-publish'
+apply plugin: 'application'
 
 sourceCompatibility = 1.8
 
 group = 'com.ofg'
 description = 'Microhackaton Deployment Server'
 version = '0.0.1-SNAPSHOT'
+mainClassName = 'com.ofg.deployments.Main'
 
 buildscript {
     repositories {
