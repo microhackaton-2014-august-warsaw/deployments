@@ -1,5 +1,8 @@
 package com.ofg.deployments
+
 import io.undertow.Undertow
+import org.codehaus.jackson.map.ObjectMapper
+import org.codehaus.jackson.type.TypeReference
 import org.jboss.resteasy.plugins.providers.jackson.ResteasyJacksonProvider
 import org.jboss.resteasy.plugins.server.undertow.UndertowJaxrsServer
 import org.kohsuke.args4j.CmdLineException
@@ -42,6 +45,8 @@ It will expose one method on /stop to stop the server. Default is 18081""")
     @Option(name = '-j', usage = "java binary. Default is 'java'")
     private String java = "java"
 
+    private static File configFile = new File("deployment-config.json")
+
     @GET
     @Path("/stop")
     public String stop() {
@@ -58,60 +63,75 @@ It will expose one method on /stop to stop the server. Default is 18081""")
     @Path("/list")
     @Produces("application/json")
     public List<Deployment> list() {
-        return spawnedProcesses.values().collect {it.deployment}
+        return spawnedProcesses.values().collect { it.deployment }
     }
 
     @POST
     @Path("/deploy")
     @Consumes("application/json")
     public String deploy(Deployment deployment) {
-        println "new deployment started $deployment"
-        File jar = new File(deploymentDir, "${deployment.artifactId}-${deployment.version}.jar")
+        try {
+            println "new deployment started $deployment"
+            File jar = new File(deploymentDir, "${deployment.artifactId}-${deployment.version}.jar")
 
-        if (!jar.exists()) {
-            println "Got new version, downloading"
-            jar.withOutputStream {
-                it << new URL("${repository}${deployment.groupId.replaceAll('\\.', '/')}/${deployment.artifactId}/${deployment.version}/${deployment.artifactId}-${deployment.version}.jar").openStream()
-            }
+            if (!jar.exists()) {
+                println "Got new version, downloading"
+                URL url = new URL("${repository}${deployment.groupId.replaceAll('\\.', '/')}/${deployment.artifactId}/${deployment.version}/${deployment.artifactId}-${deployment.version}.jar")
+                InputStream is = url.openStream()
 
-            println "finished downloading"
-        }
-
-        println "deploying"
-
-        synchronized (spawnedProcesses) {
-            // make sure one deployment is done at a time
-            if (spawnedProcesses.get(deployment.uniqueId()) != null) {
-                Process oldProcess = spawnedProcesses.get(deployment.uniqueId()).process
-                println "killing old process"
-                oldProcess.destroy()
-                oldProcess.waitFor()
-
-                println "Old process killed"
-            }
-
-            String command = "$java ${deployment.jvmParams} -jar ${jar.absolutePath}"
-            println "command $command"
-            Process proc = command.execute()
-
-            spawnedProcesses.put(deployment.uniqueId(), new ProcessWithDeployment(process: proc, deployment: deployment))
-
-            File output = new File(logsDir, "${deployment.uniqueId()}.log")
-
-            Writer writer = new FileWriter(output)
-
-            proc.consumeProcessOutput(writer, writer)
-
-            new Thread({
-                // flush the writier, so we get realtime logs
-                while (proc.alive) {
-                    writer.flush()
-                    Thread.sleep(100)
+                jar.withOutputStream {
+                    it << is
                 }
-            }).start()
-        }
 
-        return "pozdrawiam"
+                println "finished downloading"
+            }
+
+            println "deploying"
+
+            synchronized (spawnedProcesses) {
+                // make sure one deployment is done at a time
+                if (spawnedProcesses.get(deployment.uniqueId()) != null) {
+                    Process oldProcess = spawnedProcesses.get(deployment.uniqueId()).process
+                    println "killing old process"
+                    oldProcess.destroy()
+                    oldProcess.waitFor()
+
+                    println "Old process killed"
+                }
+
+                String command = "$java ${deployment.jvmParams} -jar ${jar.absolutePath}"
+                println "command $command"
+                Process proc = command.execute()
+
+                spawnedProcesses.put(deployment.uniqueId(), new ProcessWithDeployment(process: proc, deployment: deployment))
+
+                File output = new File(logsDir, "${deployment.uniqueId()}.log")
+
+                Writer writer = new FileWriter(output)
+
+                proc.consumeProcessOutput(writer, writer)
+
+                new Thread({
+                    // flush the writier, so we get realtime logs
+                    while (proc.alive) {
+                        writer.flush()
+                        Thread.sleep(100)
+                    }
+                }).start()
+
+                configFile.withOutputStream { fos ->
+                    ObjectMapper mapper = new ObjectMapper()
+
+                    mapper.writeValue(fos, spawnedProcesses.values().collect { it.deployment })
+                }
+            }
+
+            return "pozdrawiam"
+        } catch (Exception e) {
+            e.printStackTrace()
+
+            return "ERROR: $e.message"
+        }
     }
 
     private static void scheduleShutdownIn1Second() {
@@ -151,9 +171,24 @@ It will expose one method on /stop to stop the server. Default is 18081""")
         try {
             parser.parseArgument(args);
             startDeploymentServer()
+
+            readConfig()
         } catch (CmdLineException e) {
             System.err.println(e.getMessage())
             parser.printUsage(System.err)
+        }
+    }
+
+    void readConfig() {
+        if (configFile.exists()) {
+            configFile.withInputStream { fis ->
+                ObjectMapper mapper = new ObjectMapper()
+                List<Deployment> deployments = mapper.readValue(fis, new TypeReference<List<Deployment>>() {})
+
+                deployments.each { deployment ->
+                    deploy(deployment)
+                }
+            }
         }
     }
 

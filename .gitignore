@@ -7,3 +7,4 @@ build
 jars
 logs
 .java-version
+deployment-config.json
