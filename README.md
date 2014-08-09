@@ -4,7 +4,7 @@ deployments
 simple rest-controller deploying server
 
 /deploy (POST)
--------------=
+-------------
 Send a json like this:
 
 {
