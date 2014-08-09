@@ -32,7 +32,7 @@ It will expose one method on /stop to stop the server. Default is 18081""")
     private String controlHost = "0.0.0.0"
 
     @Option(name = '-pip', usage = "Public IP, by default is not used")
-    private String pip = null
+    private static String pip = null
 
     @Option(name = '-r', usage = "Reposioty where the jars are uploaded. Default is 'http://nexus.microhackathon.pl/content/repositories/releases/'")
     private String repository = "http://nexus.microhackathon.pl/content/repositories/releases/"
