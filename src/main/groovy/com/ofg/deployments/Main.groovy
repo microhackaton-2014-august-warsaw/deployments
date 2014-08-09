@@ -31,6 +31,9 @@ It will expose one method on /stop to stop the server. Default is 18081""")
     @Option(name = '-h', usage = "Host to bind to. Default is 0.0.0.0")
     private String controlHost = "0.0.0.0"
 
+    @Option(name = '-pip', usage = "Public IP, by default is not used")
+    private String pip = null
+
     @Option(name = '-r', usage = "Reposioty where the jars are uploaded. Default is 'http://nexus.microhackathon.pl/content/repositories/releases/'")
     private String repository = "http://nexus.microhackathon.pl/content/repositories/releases/"
 
@@ -99,7 +102,8 @@ It will expose one method on /stop to stop the server. Default is 18081""")
                     println "Old process killed"
                 }
 
-                String command = "$java -Dmicroservice.host=${controlHost} ${deployment.jvmParams} -jar ${jar.absolutePath}"
+                String pipCmd = pip == null ? '' : "-Dmicroservice.host=${pip}"
+                String command = "$java $pipCmd ${deployment.jvmParams} -jar ${jar.absolutePath}"
                 println "command $command"
                 Process proc = command.execute()
 
