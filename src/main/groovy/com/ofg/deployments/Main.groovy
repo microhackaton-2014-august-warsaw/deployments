@@ -102,7 +102,7 @@ It will expose one method on /stop to stop the server. Default is 18081""")
                     println "Old process killed"
                 }
 
-                String pipCmd = pip == null ? '' : "-Dmicroservice.host=${pip}"
+                String pipCmd = ((pip == null) ? '' : "-Dmicroservice.host=${pip}")
                 String command = "$java $pipCmd ${deployment.jvmParams} -jar ${jar.absolutePath}"
                 println "command $command"
                 Process proc = command.execute()
