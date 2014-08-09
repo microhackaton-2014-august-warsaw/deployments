@@ -117,6 +117,8 @@ It will expose one method on /stop to stop the server. Default is 18081""")
                         writer.flush()
                         Thread.sleep(100)
                     }
+
+                    spawnedProcesses.remove(deployment.uniqueId())
                 }).start()
 
                 configFile.withOutputStream { fos ->
